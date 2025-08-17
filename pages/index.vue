@@ -1,6 +1,77 @@
 <template>
   <div class="home-page">
     <!-- SEÇÃO HERO -->
+     <header class="app-header" :class="{ 'is-scrolled': isScrolled }">
+      <div class="container navbar">
+        <NuxtLink class="brand" to="/">
+          <img src="~/assets/images/logofp-transparente.png" alt="FluxoPronto Logo" class="logo-image" />
+        </NuxtLink>
+        
+        <!-- Navegação Desktop -->
+        <nav class="nav-desktop">
+          <NuxtLink to="/marketplace" class="nav-link" :class="{ active: isActive('/marketplace') }">Marketplace</NuxtLink>
+          <NuxtLink to="/como-funciona" class="nav-link" :class="{ active: isActive('/como-funciona') }">Como funciona</NuxtLink>
+          <div class="dropdown" @mouseenter="isDropdownOpen = true" @mouseleave="isDropdownOpen = false">
+            <button class="nav-link" :class="{ active: isPlatformRouteActive }">
+              <span>Plataforma</span>
+              <span class="material-icons">expand_more</span>
+            </button>
+            <Transition name="dropdown-fade">
+              <div v-if="isDropdownOpen" class="dropdown-menu">
+                <NuxtLink to="/sobre" class="dropdown-item">Sobre Nós</NuxtLink>
+                <NuxtLink to="/diferenciais" class="dropdown-item">Diferenciais</NuxtLink>
+                <NuxtLink to="/vender" class="dropdown-item">Vender na Plataforma</NuxtLink>
+                <NuxtLink to="/faq" class="dropdown-item">FAQ</NuxtLink>
+              </div>
+            </Transition>
+          </div>
+        </nav>
+
+        <!-- Ações (Direita) -->
+        <div class="actions-right">
+          <!-- Ações Desktop -->
+          <div class="actions-desktop">
+            <NuxtLink class="btn btn-ghost cart-button" to="/carrinho" aria-label="Carrinho">
+              <span class="material-icons">shopping_cart</span>
+              <span v-if="totalQuantity" class="badge-count">{{ totalQuantity }}</span>
+            </NuxtLink>
+            <NuxtLink class="btn btn-outline" to="/login">Entrar</NuxtLink>
+            <NuxtLink class="btn btn-gradient" to="/cadastro">Criar conta</NuxtLink>
+          </div>
+          <!-- Ações Mobile -->
+          <div class="actions-mobile">
+             <NuxtLink class="btn btn-ghost cart-button" to="/carrinho" aria-label="Carrinho">
+              <span class="material-icons">shopping_cart</span>
+              <span v-if="totalQuantity" class="badge-count">{{ totalQuantity }}</span>
+            </NuxtLink>
+            <button class="mobile-menu-toggle" @click="isMobileMenuOpen = !isMobileMenuOpen" aria-label="Abrir menu">
+              <span class="material-icons">{{ isMobileMenuOpen ? 'close' : 'menu' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Menu Mobile -->
+    <Transition name="slide-fade">
+      <nav v-if="isMobileMenuOpen" class="nav-mobile">
+        <NuxtLink to="/marketplace" @click="closeMobileMenu">Marketplace</NuxtLink>
+        <NuxtLink to="/como-funciona" @click="closeMobileMenu">Como funciona</NuxtLink>
+        <details class="mobile-dropdown">
+            <summary>Plataforma <span class="material-icons">expand_more</span></summary>
+            <NuxtLink to="/sobre" @click="closeMobileMenu">Sobre Nós</NuxtLink>
+            <NuxtLink to="/diferenciais" @click="closeMobileMenu">Diferenciais</NuxtLink>
+            <NuxtLink to="/vender" @click="closeMobileMenu">Vender na Plataforma</NuxtLink>
+            <NuxtLink to="/faq" @click="closeMobileMenu">FAQ</NuxtLink>
+        </details>
+        <div class="mobile-actions">
+          <NuxtLink class="btn btn-outline btn-block" to="/auth/login" @click="closeMobileMenu">Entrar</NuxtLink>
+          <NuxtLink class="btn btn-gradient btn-block" to="/auth/cadastro" @click="closeMobileMenu">Criar conta</NuxtLink>
+        </div>
+      </nav>
+    </Transition>
+
+
     <section class="section-container hero-section">
       <div class="hero-content">
         <ClientOnly>
@@ -111,7 +182,46 @@ import ProductCard from '@/components/ui/ProductCard.vue'
 // const { featured } = useProducts()
 // const featuredLimited = computed(() => featured.value.slice(0, 3))
 
-function addToCart(p) { add({ id: p.id, title: p.title, price: p.price }) }
+// function addToCart(p) { add({ id: p.id, title: p.title, price: p.price }) }
+
+// import { useCart } from '@/composables/useCart'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+// import SiteFooter from '@/components/site/SiteFooter.vue'
+
+const route = useRoute()
+// const { totalQuantity } = useCart()
+
+const isMobileMenuOpen = ref(false)
+const isScrolled = ref(false)
+const isDropdownOpen = ref(false)
+
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 20;
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+const isActive = (path) => {
+  if (path === '/') return route.path === path
+  return route.path.startsWith(path)
+}
+
+const isPlatformRouteActive = computed(() => {
+    const platformRoutes = ['/sobre', '/diferenciais', '/faq', '/vender'];
+    return platformRoutes.some(path => route.path.startsWith(path));
+});
+
+const closeMobileMenu = () => {
+    isMobileMenuOpen.value = false;
+}
+
+
 </script>
 
 <style scoped>
@@ -372,6 +482,254 @@ function addToCart(p) { add({ id: p.id, title: p.title, price: p.price }) }
   }
   .step-connector {
     display: none;
+  }
+}
+
+
+/* Estrutura e Header */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+}
+.app-header.is-scrolled {
+  background: var(--surface-1-alpha-95);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-bottom-color: var(--border);
+}
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+}
+.brand .logo-image {
+  height: 32px;
+  width: auto;
+  transition: transform 0.2s ease;
+}
+.brand:hover .logo-image {
+  transform: scale(1.05);
+}
+
+/* Navegação Desktop */
+.nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: color 0.2s ease;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.nav-link:hover {
+  color: var(--text-1);
+}
+.nav-link.active {
+  color: var(--brand-500);
+  font-weight: 600;
+}
+.nav-link .material-icons {
+    font-size: 20px;
+    transition: transform 0.2s ease;
+}
+
+/* Dropdown */
+.dropdown {
+    position: relative;
+}
+.dropdown .nav-link:hover .material-icons {
+    transform: rotate(180deg);
+}
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 12px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 8px;
+    min-width: 200px;
+    z-index: 10;
+    display: grid;
+    gap: 4px;
+}
+.dropdown-item {
+    display: block;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--text-2);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.dropdown-item:hover {
+    background: var(--surface-2);
+    color: var(--text-1);
+}
+
+.actions-desktop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.cart-button {
+  position: relative;
+  padding: 8px;
+  color: var(--text-2);
+}
+.cart-button:hover {
+  color: var(--text-1);
+  background-color: var(--surface-2);
+}
+.badge-count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: var(--brand-500);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--surface-1);
+}
+.actions-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.actions-mobile {
+  display: none; /* Escondido por padrão */
+  align-items: center;
+  gap: 8px;
+}
+
+/* Menu Mobile */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-1);
+  cursor: pointer;
+  z-index: 1001;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+.mobile-menu-toggle:hover {
+  background-color: var(--surface-2);
+}
+.nav-mobile {
+  display: none;
+  position: fixed;
+  top: 72px; /* Abaixo do header */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--surface-1);
+  padding: 32px;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 1000;
+  overflow-y: auto;
+}
+.nav-mobile a {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-2);
+  text-decoration: none;
+  padding: 12px 16px;
+  transition: color 0.2s ease;
+  border-radius: var(--radius-md);
+}
+.nav-mobile a:hover,
+.nav-mobile a.active {
+  color: var(--brand-500);
+  background-color: var(--surface-2);
+}
+.mobile-dropdown {
+    padding: 12px 16px;
+}
+.mobile-dropdown summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-2);
+    cursor: pointer;
+    list-style: none;
+}
+.mobile-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+.mobile-dropdown[open] > summary {
+    color: var(--brand-500);
+}
+.mobile-dropdown[open] > summary .material-icons {
+    transform: rotate(180deg);
+}
+.mobile-dropdown a {
+    padding-left: 32px;
+    font-size: 1rem;
+    padding-top: 16px;
+    padding-bottom: 8px;
+}
+
+.mobile-actions {
+  margin-top: auto;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 16px;
+}
+
+/* Transições */
+.dropdown-fade-enter-active, .dropdown-fade-leave-active {
+    transition: opacity .2s ease, transform .2s ease;
+}
+.dropdown-fade-enter-from, .dropdown-fade-leave-to {
+    opacity: 0;
+    transform: translateY(10px) translateX(-50%);
+}
+.slide-fade-enter-active, .slide-fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.slide-fade-enter-from, .slide-fade-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+  .nav-desktop, .actions-desktop {
+    display: none;
+  }
+  .actions-mobile, .mobile-menu-toggle, .nav-mobile {
+    display: flex;
   }
 }
 </style>

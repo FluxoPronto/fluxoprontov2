@@ -37,237 +37,209 @@ const toggleForm = () => {
 }
 
 // Funções para submeter os formulários
-const handleLogin = async () => {
+// const handleLogin = async () => {
+//   loading.value = true;
+//   try {
+//     const { data, error } = await supabase.auth.signInWithPassword({
+//       email: loginForm.value.email,
+//       password: loginForm.value.password,
+//     });
+//     if (error) throw error;
+//     navigateTo('/dashboard');
+//     console.log('Login successful:', data);
+//   } catch (error) {
+//     console.error('Login error:', error);
+//   } finally {
+//     loading.value = false;
+//   }
+// }
+
+async function handleLogin() {
+  if (!email.value || !password.value) return;
   loading.value = true;
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginForm.value.email,
-      password: loginForm.value.password,
-    });
-    if (error) throw error;
-    navigateTo('/dashboard');
-    console.log('Login successful:', data);
-  } catch (error) {
-    console.error('Login error:', error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-const loginCliente = async () => {
-  try {
-    loading.value = true
-    const cleanedCpf = cleanCpf(cpf.value)
-    
-    // 1. Busca usuário pelo CPF
-    const { data: userData, error: userError } = await supabase
-      .from('users_sorteio_qrcode')
-      .select('email, password')
-      .eq('cpf', cleanedCpf)
-      .single()
-
-    if (userError) throw new Error('Erro ao buscar usuário')
-    if (!userData) throw new Error('CPF não cadastrado')
-
-    const encryptedPassword = userData.password
-    const originalPassword = decryptPassword(encryptedPassword)
-    console.log('Senha original:', originalPassword)
-    // 2. Faz login automático com os dados do usuário
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: userData.email,
-      password: originalPassword
-    });
-
-    console.log('data aa', data)
-
-    if (error) throw error
-
-    navigateTo('/cliente');
-    // testToastify();
-
-
-  } catch (error) {
-    alert(error.message)
-  } finally {
-    loading.value = false
-  }
-}
-
-function testToastify() {
-  useToastify("Login com sucesso !", {
-    autoClose: 2000,
-    position: ToastifyOption.POSITION.TOP_RIGHT,
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value,
   });
+  loading.value = false;
+  if (error) throw error;
+  navigateTo('/dashboard');
+  if (!error) {
+    console.log("Login bem-sucedido:");
+  } else {
+    console.log("Erro no login:", error.message);
+  }
 }
+
 </script>
 
+
 <template>
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="logo-container">
-        <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-J2M4IIsPAPbrwxntzNvO8BZKVArlAU.png" alt="Drogaria Popular do Pará" class="logo">
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-form-wrapper">
+        <div class="auth-header">
+          <h1>Bem-vindo de volta!</h1>
+          <p class="field-hint">Faça login para acessar seus workflows e continuar de onde parou.</p>
+        </div>
+
+        <form class="form-stack" @submit.prevent="handleLogin">
+          <div class="field">
+            <label for="email" class="field-label">Email</label>
+            <input id="email" v-model="email" type="email" class="input" placeholder="seu.email@exemplo.com" required />
+          </div>
+
+          <div class="field">
+            <label for="password" class="field-label">Senha</label>
+            <input id="password" v-model="password" type="password" class="input" placeholder="Sua senha" required />
+          </div>
+
+          <button type="submit" class="btn btn-gradient btn-lg btn-block" :disabled="loading">
+            <span v-if="!loading">Entrar</span>
+            <span v-else>Entrando...</span>
+          </button>
+        </form>
+
+        <div class="auth-links">
+          <NuxtLink to="/auth/cadastro" class="hover-underline">Não tem uma conta? <strong>Cadastre-se</strong></NuxtLink>
+          <NuxtLink to="/auth/recuperar-senha" class="hover-underline field-hint">Esqueceu sua senha?</NuxtLink>
+        </div>
       </div>
-      
-      <!-- Formulário de Login -->
-      <form v-if="isLoginForm" @submit.prevent="handleLogin" class="auth-form">
-        <h2>Login</h2>
-        
-        <div class="form-group">
-          <label for="login-email">Email</label>
-          <input 
-            id="login-email" 
-            type="email" 
-            v-model="loginForm.email" 
-            placeholder="Seu email" 
-            required
-          >
+
+      <div class="auth-panel">
+        <div class="auth-panel-content">
+          <img src="/icons/brand-icon.svg" alt="Ícone FluxoPronto" class="auth-panel-icon"/>
+          <h2>Acelere sua Operação com Automações Prontas</h2>
+          <p>Encontre, compre e implante fluxos de trabalho n8n em minutos, não em semanas.</p>
         </div>
-        
-        <div class="form-group">
-          <label for="login-password">Senha</label>
-          <input 
-            id="login-password" 
-            type="password" 
-            v-model="loginForm.password" 
-            placeholder="Sua senha" 
-            required
-          >
-        </div>
-        
-        <button type="submit" class="btn-primary">
-          {{ loading ? 'Acessando...' : 'Acessar' }}
-        </button>
-        
-        <p class="toggle-text">
-          Login como cliente ? 
-          <a href="#" @click.prevent="toggleForm">Acesso Cliente</a>
-        </p>
-      </form>
-      
-      <!-- Formulário de Cadastro -->
-      <form v-else @submit.prevent="loginCliente" class="auth-form">
-        <h2>Login como cliente</h2>
-        
-        <div class="form-group">
-          <label for="register-cpf">CPF</label>
-          <input 
-            id="register-cpf" 
-            type="text" 
-            v-model="cpf" 
-            placeholder="000.000.000-00"
-            v-maska="'###.###.###-##'"
-            maxlength="14"
-            required
-            :disabled="loading"
-          >
-        </div>
-        
-        <button type="submit" class="btn-primary">
-          {{ loading ? 'Acessando...' : 'Acessar' }}
-        </button>
-        
-        <p class="toggle-text">
-          Realizar login padrão ? 
-          <a href="#" @click.prevent="toggleForm">Acesso padrão</a>
-        </p>
-      </form>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.auth-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.auth-page {
+  display: grid;
+  place-items: center;
   min-height: 100vh;
-  background-color: #f5f5f5;
-  padding: 20px;
+  background-color: var(--surface-2);
+  padding: 24px;
 }
 
-.auth-card {
+.auth-container {
+  display: grid;
+  grid-template-columns: 1fr;
   width: 100%;
-  max-width: 450px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 1100px;
+  background: var(--surface-1);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
-  padding: 30px;
 }
 
-.logo-container {
+.auth-form-wrapper {
+  padding: clamp(32px, 8vw, 64px);
   display: flex;
+  flex-direction: column;
   justify-content: center;
 }
 
-.logo {
-  max-width: 200px;
-  height: auto;
-}
-
-.auth-form h2 {
+.auth-header {
+  margin-bottom: 32px;
   text-align: center;
-  color: #003399;
-  margin-bottom: 24px;
-  font-size: 24px;
 }
 
-.form-group {
-  margin-bottom: 16px;
+.auth-header h1 {
+  font-size: clamp(1.8rem, 5vw, 2.25rem);
+  font-weight: 800;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: #333;
+.auth-header .field-hint {
+  margin-top: 8px;
+  font-size: 1.05rem;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.form-group input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-  transition: border-color 0.3s;
+.form-stack {
+  display: grid;
+  gap: 20px;
 }
 
-.form-group input:focus {
-  border-color: #003399;
-  outline: none;
+.auth-links {
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
 }
 
-.btn-primary {
-  width: 100%;
-  background-color: #e30613;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  margin-top: 10px;
-}
-
-.btn-primary:hover {
-  background-color: #c00;
-}
-
-.toggle-text {
-  text-align: center;
-  margin-top: 20px;
-  color: #666;
-}
-
-.toggle-text a {
-  color: #003399;
+.auth-links a {
+  color: var(--text-2);
   text-decoration: none;
-  font-weight: 500;
+}
+.auth-links a:hover {
+  color: var(--text-1);
+}
+.auth-links strong {
+  color: var(--brand-500);
+  font-weight: 600;
 }
 
-.toggle-text a:hover {
-  text-decoration: underline;
+/* Painel Lateral */
+.auth-panel {
+  display: none; /* Oculto em telas menores */
+  background: var(--gradient-brand);
+  color: #fff;
+  padding: 64px;
+}
+
+.auth-panel-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  text-align: left;
+}
+
+.auth-panel-icon {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 8px;
+}
+
+.auth-panel h2 {
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.auth-panel p {
+  color: var(--brand-200);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+
+/* --- RESPONSIVIDADE --- */
+@media (min-width: 992px) {
+  .auth-container {
+    grid-template-columns: 1.1fr 1fr;
+  }
+  .auth-panel {
+    display: flex;
+    align-items: center;
+  }
+  .auth-header {
+    text-align: left;
+  }
+  .auth-header .field-hint {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 </style>
